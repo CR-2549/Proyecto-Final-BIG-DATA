@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Detector de Perfumes - Original vs Falso</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #cce7ff; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: white;
+      padding: 25px 35px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      text-align: center;
+      max-width: 450px;
+      width: 100%;
+    }
+
+    h1 { font-size: 22px; margin-bottom: 10px; }
+
+    button {
+      background: #111827;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    #webcam-container {
+      margin-top: 15px;
+      border: 6px solid #555;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      display: inline-block;
+      padding: 5px;
+      background-color: #fff; 
+    }
+
+    video, canvas {
+      border-radius: 15px;
+    }
+
+    #label-container {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 22px;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      transition: all 0.3s;
+      border: 3px solid #333;
+      background-color: #f0f8ff; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Detector de Perfumes</h1>
+    <p>Escanea el perfume para saber si es Original o Falso</p>
+    <button onclick="init()">Iniciar cámara</button>
+    <div id="webcam-container"></div>
+    <div id="label-container">Esperando predicción...</div>
+  </div>
+
+  <script>
+    const URL = "https://teachablemachine.withgoogle.com/models/8mMtpIW2s/";
+
+    let model, webcam, labelContainer, maxPredictions;
+
+    async function init() {
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      model = await tmImage.load(modelURL, metadataURL);
+
+      const flip = true;
+      webcam = new tmImage.Webcam(320, 320, flip);
+
+      await webcam.setup({ facingMode: "environment" });
+      await webcam.play();
+
+      document.getElementById("webcam-container").innerHTML = "";
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+      labelContainer = document.getElementById("label-container");
+
+      window.requestAnimationFrame(loop);
+    }
+
+    async function loop() {
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+
+      let resultado = prediction.sort((a, b) => b.probability - a.probability)[0];
+
+      labelContainer.innerHTML =
+        resultado.className.toUpperCase() + " - " + (resultado.probability * 100).toFixed(2) + "%";
+
+      if (resultado.className.toLowerCase() === "original") {
+        labelContainer.style.backgroundColor = "#4caf50";
+        labelContainer.style.color = "#fff";
+        labelContainer.style.border = "3px solid #388e3c";
+      } else {
+        labelContainer.style.backgroundColor = "#f44336";
+        labelContainer.style.color = "#fff";
+        labelContainer.style.border = "3px solid #b71c1c";
+      }
+    }
+  </script>
+</body>
+</html>
+
+
